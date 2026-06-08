@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: ytdlp-web
+    runtime: docker
+    plan: free        # free tier — spins down after 15 min idle
+    healthCheckPath: /

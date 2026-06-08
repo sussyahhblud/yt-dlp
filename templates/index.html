@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ytdlp-web</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⬇</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #09090c;
+      --surface:   #101018;
+      --surface-2: #17171f;
+      --border:    rgba(255,255,255,0.07);
+      --border-2:  rgba(255,255,255,0.13);
+      --accent:       #f97316;
+      --accent-hover: #fb923c;
+      --accent-dim:   rgba(249,115,22,0.1);
+      --text:    #e4e1dc;
+      --muted:   #52525e;
+      --muted-2: #71717a;
+      --success:     #4ade80;
+      --success-dim: rgba(74,222,128,0.1);
+      --error:     #f87171;
+      --error-dim: rgba(248,113,113,0.1);
+      --mono:    'IBM Plex Mono', monospace;
+      --sans:    'Outfit', sans-serif;
+      --display: 'Syne', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .app { width: 100%; max-width: 640px; }
+
+    /* ── Header ── */
+    .header { display:flex; align-items:center; gap:.75rem; margin-bottom:1.75rem; }
+    .logo { font-family:var(--display); font-size:1.3rem; font-weight:800; letter-spacing:-.04em; }
+    .logo-dot { color:var(--accent); }
+    .badge { font-family:var(--mono); font-size:.6rem; color:var(--muted-2); border:1px solid var(--border-2); padding:.2rem .45rem; border-radius:3px; letter-spacing:.06em; text-transform:uppercase; }
+
+    /* ── Card ── */
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+
+    /* ── Tabs ── */
+    .tab-bar { display:flex; border-bottom:1px solid var(--border); padding:0 1.75rem; }
+    .tab {
+      font-family:var(--mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.1em;
+      color:var(--muted); background:none; border:none; padding:.9rem 0; margin-right:1.75rem;
+      cursor:pointer; position:relative; transition:color .15s;
+    }
+    .tab:hover { color:var(--text); }
+    .tab.active { color:var(--text); }
+    .tab.active::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px; background:var(--accent); border-radius:1px; }
+
+    /* ── Panel ── */
+    .panel { padding:1.75rem; display:flex; flex-direction:column; gap:1.25rem; }
+    .panel.hidden { display:none; }
+
+    /* ── Field label ── */
+    .field-label { font-family:var(--mono); font-size:.63rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:.45rem; display:flex; align-items:center; gap:.5rem; }
+    .field-label span { color:var(--text); font-size:.72rem; }
+
+    /* ── URL input ── */
+    .url-input {
+      width:100%; background:var(--surface-2); border:1px solid var(--border); border-radius:8px;
+      color:var(--text); font-family:var(--mono); font-size:.82rem; padding:.7rem 1rem;
+      outline:none; transition:border-color .15s, box-shadow .15s; caret-color:var(--accent);
+    }
+    .url-input::placeholder { color:var(--muted); }
+    .url-input:focus { border-color:rgba(249,115,22,.4); box-shadow:0 0 0 3px var(--accent-dim); }
+
+    /* ── Pills ── */
+    .pills { display:flex; gap:.4rem; flex-wrap:wrap; }
+    .pill {
+      font-family:var(--mono); font-size:.72rem; padding:.35rem .75rem;
+      border:1px solid var(--border); border-radius:5px; background:transparent;
+      color:var(--muted-2); cursor:pointer; transition:all .12s; letter-spacing:.03em;
+    }
+    .pill:hover { border-color:rgba(249,115,22,.35); color:var(--text); }
+    .pill.active { background:var(--accent-dim); border-color:rgba(249,115,22,.5); color:var(--accent); }
+
+    /* ── Source display (transcode tab) ── */
+    .src-box {
+      background:var(--surface-2); border:1px dashed var(--border-2); border-radius:8px;
+      padding:.75rem 1rem; display:flex; align-items:center; gap:.75rem;
+    }
+    .src-box.has-file { border-style:solid; border-color:rgba(249,115,22,.3); }
+    .src-icon { font-size:1rem; flex-shrink:0; }
+    .src-name { font-family:var(--mono); font-size:.75rem; color:var(--text); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .src-name.empty { color:var(--muted); }
+    .src-actions { display:flex; gap:.5rem; flex-shrink:0; }
+    .src-btn {
+      font-family:var(--mono); font-size:.65rem; padding:.25rem .55rem; border:1px solid var(--border-2);
+      border-radius:4px; background:transparent; color:var(--muted-2); cursor:pointer; white-space:nowrap;
+      transition:all .12s;
+    }
+    .src-btn:hover { color:var(--text); border-color:rgba(249,115,22,.4); }
+    .src-btn.primary { border-color:rgba(249,115,22,.4); color:var(--accent); }
+    .src-btn:disabled { opacity:.35; cursor:not-allowed; }
+
+    /* ── RF Slider ── */
+    .rf-wrap { padding:.25rem 0; }
+    .rf-slider {
+      --fill: 46%;
+      width:100%; height:3px; appearance:none; -webkit-appearance:none;
+      background: linear-gradient(to right, var(--accent) var(--fill), var(--surface-2) var(--fill));
+      border-radius:2px; outline:none; cursor:pointer; display:block;
+    }
+    .rf-slider::-webkit-slider-thumb {
+      -webkit-appearance:none; width:14px; height:14px; border-radius:50%;
+      background:var(--accent); cursor:pointer; box-shadow:0 0 0 3px var(--accent-dim);
+    }
+    .rf-slider::-moz-range-thumb {
+      width:14px; height:14px; border-radius:50%; border:none;
+      background:var(--accent); cursor:pointer;
+    }
+    .rf-hints { display:flex; justify-content:space-between; margin-top:.4rem; }
+    .rf-hint { font-family:var(--mono); font-size:.58rem; color:var(--muted); }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      width:100%; padding:.85rem; background:var(--accent); color:#000;
+      font-family:var(--display); font-weight:700; font-size:.9rem; letter-spacing:.1em;
+      text-transform:uppercase; border:none; border-radius:8px; cursor:pointer;
+      transition:background .12s, transform .1s, box-shadow .12s;
+    }
+    .btn-primary:hover { background:var(--accent-hover); box-shadow:0 4px 20px rgba(249,115,22,.3); transform:translateY(-1px); }
+    .btn-primary:active { transform:translateY(0); box-shadow:none; }
+    .btn-primary:disabled { opacity:.4; cursor:not-allowed; transform:none; box-shadow:none; }
+
+    /* ── Separator ── */
+    .sep { height:1px; background:var(--border); }
+
+    /* ── Progress ── */
+    .progress-wrap { display:none; flex-direction:column; gap:.85rem; }
+    .progress-wrap.show { display:flex; }
+    .p-filename { font-family:var(--mono); font-size:.72rem; color:var(--muted-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .bar-track { height:3px; background:var(--surface-2); border-radius:2px; overflow:hidden; }
+    .bar-fill {
+      height:100%; background:var(--accent); border-radius:2px; width:0%;
+      transition:width .5s cubic-bezier(.25,1,.5,1); position:relative;
+    }
+    .bar-fill::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg,transparent 60%,rgba(255,255,255,.25)); }
+    .stats-row { display:flex; gap:1.5rem; }
+    .stat { display:flex; flex-direction:column; gap:.1rem; }
+    .stat-label { font-family:var(--mono); font-size:.58rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); }
+    .stat-val { font-family:var(--mono); font-size:.78rem; color:var(--text); }
+    .status-line { display:flex; align-items:center; gap:.5rem; }
+    .dot { width:6px; height:6px; border-radius:50%; background:var(--accent); flex-shrink:0; animation:blink 1.4s ease-in-out infinite; }
+    .dot.done { background:var(--success); animation:none; }
+    .dot.fail { background:var(--error); animation:none; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+    .status-text { font-family:var(--mono); font-size:.72rem; color:var(--muted-2); }
+    .btn-save {
+      display:none; text-align:center; padding:.75rem; border:1px solid var(--success);
+      border-radius:8px; background:var(--success-dim); color:var(--success);
+      font-family:var(--mono); font-size:.78rem; letter-spacing:.04em; text-decoration:none;
+      cursor:pointer; transition:background .12s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .btn-save:hover { background:rgba(74,222,128,.18); }
+    .btn-save.show { display:block; }
+    .error-box { display:none; background:var(--error-dim); border:1px solid rgba(248,113,113,.2); border-radius:8px; padding:.75rem 1rem; font-family:var(--mono); font-size:.72rem; color:var(--error); line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+    .error-box.show { display:block; }
+
+    /* ── Footer ── */
+    .footer { margin-top:1.25rem; font-family:var(--mono); font-size:.6rem; color:var(--muted); text-align:center; opacity:.4; }
+  
+    /* ── Cookies widget ── */
+    .cookie-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 0.85rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .cookie-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+      background: var(--muted);
+    }
+    .cookie-dot.ok  { background: var(--success); }
+    .cookie-dot.bad { background: var(--error); }
+    .cookie-label {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--muted-2);
+      flex: 1;
+    }
+    .cookie-label span { color: var(--text); }
+    .btn-cookie {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      padding: 0.3rem 0.65rem;
+      border: 1px solid var(--border-2);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--muted-2);
+      cursor: pointer;
+      transition: all 0.12s;
+      white-space: nowrap;
+    }
+    .btn-cookie:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-cookie.danger:hover { border-color: var(--error); color: var(--error); }
+    #cookieFile { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="logo">ytdlp<span class="logo-dot">·</span>web</div>
+    <div class="badge">self-hosted</div>
+  </div>
+
+  <div class="card">
+    <div class="tab-bar">
+      <button class="tab active" id="tabDl">Download</button>
+      <button class="tab" id="tabHb">Transcode</button>
+    </div>
+
+    <!-- ════════════════ DOWNLOAD PANEL ════════════════ -->
+    <div class="panel" id="panelDl">
+
+      <div>
+        <div class="field-label">URL</div>
+        <input class="url-input" id="urlIn" type="url"
+               placeholder="https://youtube.com/watch?v=..."
+               autocomplete="off" spellcheck="false">
+      </div>
+
+      <div>
+        <div class="field-label">Format</div>
+        <div class="pills" id="dlFmtPills">
+          <button class="pill active" data-fmt="best">Best</button>
+          <button class="pill" data-fmt="1080">1080p</button>
+          <button class="pill" data-fmt="720">720p</button>
+          <button class="pill" data-fmt="480">480p</button>
+          <button class="pill" data-fmt="audio">MP3 Audio</button>
+        </div>
+      </div>
+
+      <div id="dlFpsRow">
+        <div class="field-label">FPS Cap</div>
+        <div class="pills" id="dlFpsPills">
+          <button class="pill active" data-fps="any">Any</button>
+          <button class="pill" data-fps="24">24 fps</button>
+          <button class="pill" data-fps="30">30 fps</button>
+          <button class="pill" data-fps="60">60 fps</button>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="dlBtn">Download</button>
+
+      <!-- Cookies -->
+      <div class="cookie-bar" id="cookieBar">
+        <div class="cookie-dot" id="cookieDot"></div>
+        <div class="cookie-label" id="cookieLabel">cookies: <span>checking...</span></div>
+        <input type="file" id="cookieFile" accept=".txt">
+        <button class="btn-cookie" id="cookieUpload">Upload cookies.txt</button>
+        <button class="btn-cookie danger" id="cookieClear" style="display:none">Clear</button>
+      </div>
+
+      <div class="sep" id="dlSep" style="display:none"></div>
+
+      <div class="progress-wrap" id="dlProgress">
+        <div class="p-filename" id="dlFilename">–</div>
+        <div class="bar-track"><div class="bar-fill" id="dlBar"></div></div>
+        <div class="stats-row">
+          <div class="stat"><span class="stat-label">Progress</span><span class="stat-val" id="dlPct">–</span></div>
+          <div class="stat"><span class="stat-label">Speed</span><span class="stat-val" id="dlSpeed">–</span></div>
+          <div class="stat"><span class="stat-label">ETA</span><span class="stat-val" id="dlEta">–</span></div>
+        </div>
+        <div class="status-line">
+          <div class="dot" id="dlDot"></div>
+          <span class="status-text" id="dlStatus">Initializing...</span>
+        </div>
+        <a class="btn-save" id="dlSaveBtn" href="#" download>↓ Save File</a>
+        <div class="error-box" id="dlErr"></div>
+      </div>
+
+    </div><!-- /panelDl -->
+
+    <!-- ════════════════ TRANSCODE PANEL ════════════════ -->
+    <div class="panel hidden" id="panelHb">
+
+      <!-- Source -->
+      <div>
+        <div class="field-label">Source</div>
+        <div class="src-box" id="srcBox">
+          <div class="src-icon">📄</div>
+          <div class="src-name empty" id="srcName">No file selected</div>
+          <div class="src-actions">
+            <button class="src-btn primary" id="srcUseLast" disabled>↓ Last download</button>
+            <label class="src-btn" style="cursor:pointer">
+              Upload
+              <input type="file" id="srcUpload" accept="video/*,audio/*,.mp4,.mkv,.mov,.avi,.webm,.mp3,.m4a" style="display:none">
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Encoder -->
+      <div>
+        <div class="field-label">Encoder</div>
+        <div class="pills" id="encPills">
+          <button class="pill active" data-enc="h264">H.264</button>
+          <button class="pill" data-enc="h265">H.265</button>
+          <button class="pill" data-enc="av1">AV1</button>
+        </div>
+      </div>
+
+      <!-- Quality -->
+      <div>
+        <div class="field-label">Quality &nbsp;<span id="rfLabel">RF 20</span></div>
+        <div class="rf-wrap">
+          <input class="rf-slider" id="rfSlider" type="range" min="14" max="30" value="20" step="1">
+          <div class="rf-hints">
+            <span class="rf-hint">← Better quality</span>
+            <span class="rf-hint">Smaller file →</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resolution -->
+      <div>
+        <div class="field-label">Resolution</div>
+        <div class="pills" id="hbResPills">
+          <button class="pill active" data-res="original">Original</button>
+          <button class="pill" data-res="1080">1080p</button>
+          <button class="pill" data-res="720">720p</button>
+          <button class="pill" data-res="480">480p</button>
+        </div>
+      </div>
+
+      <!-- FPS -->
+      <div>
+        <div class="field-label">FPS</div>
+        <div class="pills" id="hbFpsPills">
+          <button class="pill active" data-hbfps="original">Original</button>
+          <button class="pill" data-hbfps="24">24 fps</button>
+          <button class="pill" data-hbfps="30">30 fps</button>
+          <button class="pill" data-hbfps="60">60 fps</button>
+        </div>
+      </div>
+
+      <!-- Audio -->
+      <div>
+        <div class="field-label">Audio</div>
+        <div class="pills" id="hbAudioPills">
+          <button class="pill active" data-audio="aac_192">AAC 192k</button>
+          <button class="pill" data-audio="aac_128">AAC 128k</button>
+          <button class="pill" data-audio="mp3_192">MP3 192k</button>
+          <button class="pill" data-audio="copy">Passthrough</button>
+        </div>
+      </div>
+
+      <!-- Container -->
+      <div>
+        <div class="field-label">Container</div>
+        <div class="pills" id="hbFmtPills">
+          <button class="pill active" data-outfmt="mp4">MP4</button>
+          <button class="pill" data-outfmt="mkv">MKV</button>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="hbBtn">Transcode</button>
+
+      <div class="sep" id="hbSep" style="display:none"></div>
+
+      <div class="progress-wrap" id="hbProgress">
+        <div class="p-filename" id="hbFilename">–</div>
+        <div class="bar-track"><div class="bar-fill" id="hbBar"></div></div>
+        <div class="stats-row">
+          <div class="stat"><span class="stat-label">Progress</span><span class="stat-val" id="hbPct">–</span></div>
+          <div class="stat"><span class="stat-label">Enc FPS</span><span class="stat-val" id="hbFpsVal">–</span></div>
+          <div class="stat"><span class="stat-label">ETA</span><span class="stat-val" id="hbEta">–</span></div>
+        </div>
+        <div class="status-line">
+          <div class="dot" id="hbDot"></div>
+          <span class="status-text" id="hbStatus">Initializing...</span>
+        </div>
+        <a class="btn-save" id="hbSaveBtn" href="#" download>↓ Save File</a>
+        <div class="error-box" id="hbErr"></div>
+      </div>
+
+    </div><!-- /panelHb -->
+  </div><!-- /card -->
+
+  <div class="footer">yt-dlp · HandBrakeCLI · self-hosted · 1000+ sites</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// Tabs
+// ══════════════════════════════════════════════════════════════
+document.getElementById('tabDl').addEventListener('click', () => {
+  document.getElementById('tabDl').classList.add('active');
+  document.getElementById('tabHb').classList.remove('active');
+  document.getElementById('panelDl').classList.remove('hidden');
+  document.getElementById('panelHb').classList.add('hidden');
+});
+document.getElementById('tabHb').addEventListener('click', () => {
+  document.getElementById('tabHb').classList.add('active');
+  document.getElementById('tabDl').classList.remove('active');
+  document.getElementById('panelHb').classList.remove('hidden');
+  document.getElementById('panelDl').classList.add('hidden');
+  loadLastDownload();
+});
+
+// ══════════════════════════════════════════════════════════════
+// Shared pill helper
+// ══════════════════════════════════════════════════════════════
+function makePills(containerId, attr) {
+  let val = null;
+  const container = document.getElementById(containerId);
+  container.querySelectorAll('.pill').forEach(p => {
+    if (p.classList.contains('active')) val = p.dataset[attr];
+    p.addEventListener('click', () => {
+      container.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      val = p.dataset[attr];
+    });
+  });
+  return { get: () => val };
+}
+
+// ══════════════════════════════════════════════════════════════
+// SSE progress helper
+// ══════════════════════════════════════════════════════════════
+function makeProgressUI(ids) {
+  const el = id => document.getElementById(id);
+  const { sep, wrap, filename, bar, pct, stat2, eta, dot, status, saveBtn, err } = ids;
+
+  function show() {
+    el(sep).style.display = 'block';
+    el(wrap).classList.add('show');
+    el(saveBtn).classList.remove('show');
+    el(err).classList.remove('show');
+    el(dot).className = 'dot';
+    el(bar).style.width = '0%';
+    el(bar).style.background = 'var(--accent)';
+    el(pct).textContent = '–';
+    el(stat2).textContent = '–';
+    el(eta).textContent = '–';
+    el(filename).textContent = 'Initializing...';
+    el(status).textContent = 'Connecting...';
+  }
+
+  function setStatus(type, txt) {
+    el(dot).className = 'dot' + (type ? ` ${type}` : '');
+    el(status).textContent = txt;
+  }
+
+  function setError(msg) {
+    el(err).textContent = msg;
+    el(err).classList.add('show');
+    setStatus('fail', 'Failed');
+    el(bar).style.background = 'var(--error)';
+  }
+
+  return { show, setStatus, setError,
+    pct: v => el(pct).textContent = v,
+    stat2: v => el(stat2).textContent = v,
+    eta: v => el(eta).textContent = v,
+    filename: v => el(filename).textContent = v,
+    bar: v => el(bar).style.width = v,
+    saveLink: (href, text, dl) => {
+      const s = el(saveBtn);
+      s.href = href; s.textContent = text; s.setAttribute('download', dl);
+      s.classList.add('show');
+    }
+  };
+}
+
+// ══════════════════════════════════════════════════════════════
+// DOWNLOAD TAB
+// ══════════════════════════════════════════════════════════════
+const dlFmt = makePills('dlFmtPills', 'fmt');
+const dlFps = makePills('dlFpsPills', 'fps');
+
+document.querySelectorAll('#dlFmtPills .pill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.getElementById('dlFpsRow').style.display =
+      p.dataset.fmt === 'audio' ? 'none' : '';
+  });
+});
+
+const dlUI  = makeProgressUI({
+  sep:'dlSep', wrap:'dlProgress', filename:'dlFilename', bar:'dlBar',
+  pct:'dlPct', stat2:'dlSpeed', eta:'dlEta', dot:'dlDot',
+  status:'dlStatus', saveBtn:'dlSaveBtn', err:'dlErr'
+});
+
+let dlEs = null;
+const dlBtn = document.getElementById('dlBtn');
+
+dlBtn.addEventListener('click', async () => {
+  const url = document.getElementById('urlIn').value.trim();
+  if (!url) { document.getElementById('urlIn').focus(); return; }
+  if (dlEs) { dlEs.close(); dlEs = null; }
+
+  dlBtn.disabled = true;
+  dlBtn.textContent = 'Starting...';
+  dlUI.show();
+
+  let data;
+  try {
+    const res = await fetch('/download', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ url, format: dlFmt.get(), fps: dlFps.get() }),
+    });
+    data = await res.json();
+  } catch(e) {
+    dlUI.setError('Could not reach the server.');
+    dlBtn.disabled = false; dlBtn.textContent = 'Download'; return;
+  }
+  if (data.error) {
+    dlUI.setError(data.error);
+    dlBtn.disabled = false; dlBtn.textContent = 'Download'; return;
+  }
+
+  const id = data.id;
+  dlBtn.textContent = 'Downloading...';
+  dlUI.setStatus('', 'Downloading...');
+
+  const es = new EventSource(`/progress/${id}`);
+  dlEs = es;
+  es.onmessage = e => {
+    const ev = JSON.parse(e.data);
+    if (ev.type === 'ping') return;
+    if (ev.type === 'progress') {
+      dlUI.bar(Math.min(parseFloat(ev.percent)||0, 99) + '%');
+      dlUI.pct(ev.percent||'–'); dlUI.stat2(ev.speed||'–'); dlUI.eta(ev.eta||'–');
+      if (ev.filename) dlUI.filename(ev.filename);
+      dlUI.setStatus('', 'Downloading...');
+    }
+    if (ev.type === 'merging') { dlUI.bar('97%'); dlUI.eta('–'); dlUI.setStatus('', 'Merging formats...'); }
+    if (ev.type === 'ready') {
+      dlUI.bar('100%'); dlUI.pct('100%'); dlUI.eta('Done');
+      dlUI.filename(ev.filename);
+      dlUI.setStatus('done', 'Complete');
+      dlUI.saveLink(`/file/${id}`, `↓ Save — ${ev.filename}`, ev.filename);
+      dlBtn.disabled = false; dlBtn.textContent = 'Download';
+      es.close(); dlEs = null;
+    }
+    if (ev.type === 'error') {
+      dlUI.setError(ev.message||'Unknown error');
+      dlBtn.disabled = false; dlBtn.textContent = 'Download';
+      es.close(); dlEs = null;
+    }
+  };
+  es.onerror = () => {
+    if (dlEs === es) {
+      dlUI.setError('Connection lost.');
+      dlBtn.disabled = false; dlBtn.textContent = 'Download';
+      es.close(); dlEs = null;
+    }
+  };
+});
+document.getElementById('urlIn').addEventListener('keydown', e => { if (e.key==='Enter') dlBtn.click(); });
+
+// ══════════════════════════════════════════════════════════════
+// TRANSCODE TAB
+// ══════════════════════════════════════════════════════════════
+const hbEnc   = makePills('encPills',    'enc');
+const hbRes   = makePills('hbResPills',  'res');
+const hbFpsP  = makePills('hbFpsPills',  'hbfps');
+const hbAudio = makePills('hbAudioPills','audio');
+const hbFmt   = makePills('hbFmtPills',  'outfmt');
+
+// RF Slider
+const rfSlider = document.getElementById('rfSlider');
+const rfLabel  = document.getElementById('rfLabel');
+function updateSlider() {
+  const pct = ((rfSlider.value - rfSlider.min) / (rfSlider.max - rfSlider.min)) * 100;
+  rfSlider.style.setProperty('--fill', pct + '%');
+  rfLabel.textContent = `RF ${rfSlider.value}`;
+}
+rfSlider.addEventListener('input', updateSlider);
+updateSlider();
+
+// Source state
+let srcType = null, srcDlId = null, srcFile = null;
+
+function setSrc(type, id, name, file) {
+  srcType = type; srcDlId = id; srcFile = file;
+  const box  = document.getElementById('srcBox');
+  const nm   = document.getElementById('srcName');
+  box.classList.add('has-file');
+  nm.classList.remove('empty');
+  nm.textContent = name;
+}
+
+async function loadLastDownload() {
+  try {
+    const res  = await fetch('/last-download');
+    const data = await res.json();
+    const btn  = document.getElementById('srcUseLast');
+    if (data.filename) {
+      btn.disabled = false;
+      btn.textContent = `↓ ${data.filename}`;
+      btn.onclick = () => setSrc('dl_id', data.id, data.filename, null);
+      // Auto-select if nothing chosen yet
+      if (!srcType) setSrc('dl_id', data.id, data.filename, null);
+    } else {
+      btn.textContent = 'No download yet';
+    }
+  } catch(e) {}
+}
+
+document.getElementById('srcUpload').addEventListener('change', function() {
+  if (this.files[0]) setSrc('file', null, this.files[0].name, this.files[0]);
+});
+
+// Progress UI
+const hbUI  = makeProgressUI({
+  sep:'hbSep', wrap:'hbProgress', filename:'hbFilename', bar:'hbBar',
+  pct:'hbPct', stat2:'hbFpsVal', eta:'hbEta', dot:'hbDot',
+  status:'hbStatus', saveBtn:'hbSaveBtn', err:'hbErr'
+});
+
+let hbEs = null;
+const hbBtn = document.getElementById('hbBtn');
+
+hbBtn.addEventListener('click', async () => {
+  if (!srcType) {
+    document.getElementById('hbErr').textContent = 'Select a source file first.';
+    document.getElementById('hbErr').classList.add('show');
+    return;
+  }
+  if (hbEs) { hbEs.close(); hbEs = null; }
+
+  const settings = {
+    encoder:    hbEnc.get(),
+    quality:    rfSlider.value,
+    resolution: hbRes.get(),
+    fps:        hbFpsP.get(),
+    audio:      hbAudio.get(),
+    format:     hbFmt.get(),
+  };
+
+  hbBtn.disabled = true;
+  hbBtn.textContent = 'Starting...';
+  hbUI.show();
+
+  let data;
+  try {
+    let res;
+    if (srcType === 'dl_id') {
+      res = await fetch('/transcode', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ dl_id: srcDlId, settings }),
+      });
+    } else {
+      const fd = new FormData();
+      fd.append('file', srcFile);
+      Object.entries(settings).forEach(([k,v]) => fd.append(k, v));
+      res = await fetch('/transcode', { method:'POST', body: fd });
+    }
+    data = await res.json();
+  } catch(e) {
+    hbUI.setError('Could not reach the server.');
+    hbBtn.disabled = false; hbBtn.textContent = 'Transcode'; return;
+  }
+  if (data.error) {
+    hbUI.setError(data.error);
+    hbBtn.disabled = false; hbBtn.textContent = 'Transcode'; return;
+  }
+
+  const id = data.id;
+  hbBtn.textContent = 'Transcoding...';
+  hbUI.setStatus('', 'Transcoding...');
+  hbUI.filename(srcFile ? srcFile.name : document.getElementById('srcName').textContent);
+
+  const es = new EventSource(`/transcode-progress/${id}`);
+  hbEs = es;
+  es.onmessage = e => {
+    const ev = JSON.parse(e.data);
+    if (ev.type === 'ping') return;
+    if (ev.type === 'progress') {
+      hbUI.bar(Math.min(parseFloat(ev.percent)||0, 99) + '%');
+      hbUI.pct(ev.percent||'–'); hbUI.stat2(ev.fps||'–'); hbUI.eta(ev.eta||'–');
+      hbUI.setStatus('', 'Transcoding...');
+    }
+    if (ev.type === 'muxing') { hbUI.bar('97%'); hbUI.setStatus('', 'Muxing...'); }
+    if (ev.type === 'ready') {
+      hbUI.bar('100%'); hbUI.pct('100%'); hbUI.eta('Done');
+      hbUI.filename(ev.filename);
+      hbUI.setStatus('done', 'Complete');
+      hbUI.saveLink(`/transcode-file/${id}`, `↓ Save — ${ev.filename}`, ev.filename);
+      hbBtn.disabled = false; hbBtn.textContent = 'Transcode';
+      es.close(); hbEs = null;
+    }
+    if (ev.type === 'error') {
+      hbUI.setError(ev.message||'Unknown error');
+      hbBtn.disabled = false; hbBtn.textContent = 'Transcode';
+      es.close(); hbEs = null;
+    }
+  };
+  es.onerror = () => {
+    if (hbEs === es) {
+      hbUI.setError('Connection lost.');
+      hbBtn.disabled = false; hbBtn.textContent = 'Transcode';
+      es.close(); hbEs = null;
+    }
+  };
+});
+
+// ══════════════════════════════════════════════════════════════
+// Cookies
+// ══════════════════════════════════════════════════════════════
+async function refreshCookieStatus() {
+  try {
+    const r = await fetch('/cookies');
+    const d = await r.json();
+    const dot   = document.getElementById('cookieDot');
+    const label = document.getElementById('cookieLabel');
+    const clear = document.getElementById('cookieClear');
+    if (d.loaded) {
+      dot.className = 'cookie-dot ok';
+      label.innerHTML = 'cookies: <span>loaded (' + (d.size / 1024).toFixed(1) + ' KB)</span>';
+      clear.style.display = '';
+    } else {
+      dot.className = 'cookie-dot bad';
+      label.innerHTML = 'cookies: <span style="color:var(--error)">not set — YouTube may block downloads</span>';
+      clear.style.display = 'none';
+    }
+  } catch(e) {}
+}
+
+document.getElementById('cookieUpload').addEventListener('click', () => {
+  document.getElementById('cookieFile').click();
+});
+
+document.getElementById('cookieFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const label = document.getElementById('cookieLabel');
+  label.innerHTML = 'cookies: <span>uploading...</span>';
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const r = await fetch('/cookies', { method: 'POST', body: fd });
+    const d = await r.json();
+    if (d.ok) refreshCookieStatus();
+    else label.innerHTML = 'cookies: <span style="color:var(--error)">upload failed</span>';
+  } catch(e) {
+    label.innerHTML = 'cookies: <span style="color:var(--error)">upload failed</span>';
+  }
+  e.target.value = '';
+});
+
+document.getElementById('cookieClear').addEventListener('click', async () => {
+  await fetch('/cookies', { method: 'DELETE' });
+  refreshCookieStatus();
+});
+
+refreshCookieStatus();
+</script>
+</body>
+</html>
