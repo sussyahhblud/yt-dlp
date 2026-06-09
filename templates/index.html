@@ -178,7 +178,7 @@
     .footer { margin-top:1.25rem; font-family:var(--mono); font-size:.6rem; color:var(--muted); text-align:center; opacity:.4; }
   
     /* ── Cookies widget ── */
-    .cookie-bar {
+    .yt-auth {
       display: flex !important;
       align-items: center;
       gap: 0.75rem;
@@ -187,20 +187,20 @@
       border: 1px solid var(--border);
       border-radius: 8px;
     }
-    .cookie-dot {
+    .auth-dot {
       width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
       background: var(--muted);
     }
-    .cookie-dot.ok  { background: var(--success); }
-    .cookie-dot.bad { background: var(--error); }
-    .cookie-label {
+    .auth-dot.ok  { background: var(--success); }
+    .auth-dot.bad { background: var(--error); }
+    .auth-label {
       font-family: var(--mono);
       font-size: 0.68rem;
       color: var(--muted-2);
       flex: 1;
     }
-    .cookie-label span { color: var(--text); }
-    .btn-cookie {
+    .auth-label span { color: var(--text); }
+    .btn-auth {
       font-family: var(--mono);
       font-size: 0.65rem;
       padding: 0.3rem 0.65rem;
@@ -212,9 +212,9 @@
       transition: all 0.12s;
       white-space: nowrap;
     }
-    .btn-cookie:hover { border-color: var(--accent); color: var(--accent); }
-    .btn-cookie.danger:hover { border-color: var(--error); color: var(--error); }
-    #cookieFile { display: none; }
+    .btn-auth:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-auth.danger:hover { border-color: var(--error); color: var(--error); }
+    #authFile { display: none; }
 </style>
 </head>
 <body>
@@ -263,15 +263,6 @@
       </div>
 
       <button class="btn-primary" id="dlBtn">Download</button>
-
-      <!-- Cookies -->
-      <div class="cookie-bar" id="cookieBar" style="display: flex !important">
-        <div class="cookie-dot" id="cookieDot"></div>
-        <div class="cookie-label" id="cookieLabel">cookies: <span>checking...</span></div>
-        <input type="file" id="cookieFile" accept=".txt">
-        <button class="btn-cookie" id="cookieUpload">Upload cookies.txt</button>
-        <button class="btn-cookie danger" id="cookieClear" style="display:none">Clear</button>
-      </div>
 
       <div class="sep" id="dlSep" style="display:none"></div>
 
@@ -397,6 +388,15 @@
       </div>
 
     </div><!-- /panelHb -->
+
+    <!-- Cookies — lives in card so panel CSS can't touch it -->
+    <div id="ytAuth" style="display:flex; align-items:center; gap:0.75rem; padding:0.85rem 1.75rem; border-top:1px solid var(--border);">
+      <div class="auth-dot" id="authDot"></div>
+      <div class="auth-label" id="authLabel">cookies: <span>checking...</span></div>
+      <input type="file" id="authFile" accept=".txt">
+      <button class="btn-auth" id="authUpload">Upload cookies.txt</button>
+      <button class="btn-auth danger" id="authClear" style="display:none">Clear</button>
+    </div>
   </div><!-- /card -->
 
   <div class="footer">yt-dlp · HandBrakeCLI · self-hosted · 1000+ sites</div>
@@ -724,33 +724,33 @@ hbBtn.addEventListener('click', async () => {
 // Cookies
 // ══════════════════════════════════════════════════════════════
 async function refreshCookieStatus() {
-  document.getElementById('cookieBar').style.setProperty('display', 'flex', 'important');
+  document.getElementById('ytAuth').style.setProperty('display', 'flex', 'important');
   try {
     const r = await fetch('/cookies');
     const d = await r.json();
-    const dot   = document.getElementById('cookieDot');
-    const label = document.getElementById('cookieLabel');
-    const clear = document.getElementById('cookieClear');
+    const dot   = document.getElementById('authDot');
+    const label = document.getElementById('authLabel');
+    const clear = document.getElementById('authClear');
     if (d.loaded) {
-      dot.className = 'cookie-dot ok';
+      dot.className = 'auth-dot ok';
       label.innerHTML = 'cookies: <span>loaded (' + (d.size / 1024).toFixed(1) + ' KB)</span>';
       clear.style.display = '';
     } else {
-      dot.className = 'cookie-dot bad';
+      dot.className = 'auth-dot bad';
       label.innerHTML = 'cookies: <span style="color:var(--error)">not set — YouTube may block downloads</span>';
       clear.style.display = 'none';
     }
   } catch(e) {}
 }
 
-document.getElementById('cookieUpload').addEventListener('click', () => {
-  document.getElementById('cookieFile').click();
+document.getElementById('authUpload').addEventListener('click', () => {
+  document.getElementById('authFile').click();
 });
 
-document.getElementById('cookieFile').addEventListener('change', async (e) => {
+document.getElementById('authFile').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const label = document.getElementById('cookieLabel');
+  const label = document.getElementById('authLabel');
   label.innerHTML = 'cookies: <span>uploading...</span>';
   const fd = new FormData();
   fd.append('file', file);
@@ -765,7 +765,7 @@ document.getElementById('cookieFile').addEventListener('change', async (e) => {
   e.target.value = '';
 });
 
-document.getElementById('cookieClear').addEventListener('click', async () => {
+document.getElementById('authClear').addEventListener('click', async () => {
   await fetch('/cookies', { method: 'DELETE' });
   refreshCookieStatus();
 });

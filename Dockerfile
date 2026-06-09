@@ -14,7 +14,8 @@ COPY . .
 
 EXPOSE 10000
 
-CMD gunicorn app:app \
+# Self-update yt-dlp on every start so it's never stale, then launch
+CMD yt-dlp -U --no-progress; gunicorn app:app \
     --workers 1 \
     --threads 4 \
     --timeout 600 \

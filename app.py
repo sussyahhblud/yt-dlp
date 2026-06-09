@@ -62,6 +62,12 @@ def run_download(dl_id, url, fmt, fps='any'):
     if os.path.exists(COOKIES_PATH):
         ydl_opts['cookiefile'] = COOKIES_PATH
 
+    # Help bypass bot detection
+    ydl_opts['http_headers'] = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    }
+    ydl_opts['extractor_args'] = {'youtube': {'player_client': ['web', 'tv_embedded']}}
+
     if fmt == 'audio':
         ydl_opts['postprocessors'] = [{'key':'FFmpegExtractAudio',
                                         'preferredcodec':'mp3','preferredquality':'192'}]
