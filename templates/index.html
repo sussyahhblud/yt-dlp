@@ -265,7 +265,7 @@
       <button class="btn-primary" id="dlBtn">Download</button>
 
       <!-- Cookies -->
-      <div class="cookie-bar" id="cookieBar" style="display:flex!important">
+      <div class="cookie-bar" id="cookieBar" style="display: flex !important">
         <div class="cookie-dot" id="cookieDot"></div>
         <div class="cookie-label" id="cookieLabel">cookies: <span>checking...</span></div>
         <input type="file" id="cookieFile" accept=".txt">
@@ -724,6 +724,7 @@ hbBtn.addEventListener('click', async () => {
 // Cookies
 // ══════════════════════════════════════════════════════════════
 async function refreshCookieStatus() {
+  document.getElementById('cookieBar').style.setProperty('display', 'flex', 'important');
   try {
     const r = await fetch('/cookies');
     const d = await r.json();
